@@ -52,6 +52,8 @@ export default function Simulator() {
   const [isComputing, setIsComputing] = useState(false);
   const [path, setPath] = useState([]);
   const [commands, setCommands] = useState([]);
+  const [pathHistory, setPathHistory] = useState([]);
+  const [obstacleHistory, setObstacleHistory] = useState([]); // New state for obstacle history
   const [page, setPage] = useState(0);
   const [distance, setDistance] = useState(0);
   const [timeTaken, setTimeTaken] = useState(0);
@@ -220,7 +222,17 @@ export default function Simulator() {
     QueryAPI.query(obstacles, robotX, robotY, robotDir, (data, err) => {
       if (data) {
         // If the data is valid, set the path
+        const newPath = data.data.path; // Get the path from the response
+            const newDistance = data.data.distance; // Get distance from the response
+            const newTimeTaken = data.data.time_taken; // Get time taken from the response
+
         setPath(data.data.path);
+        setPathHistory(prevHistory => [
+          ...prevHistory,
+          { path: newPath, distance: newDistance, timeTaken: newTimeTaken }
+      ]);
+        setObstacleHistory(prevHistory => [...prevHistory, [...obstacles]]); // Store current obstacles
+
         // Set the commands
         const commands = [];
         for (let x of data.data.commands) {
@@ -262,6 +274,19 @@ export default function Simulator() {
     setCommands([]);
     setPage(0);
   };
+
+  const renderPathOnGraph = (path, obstacles) => {
+    setPath(path.path); // Update the path to render
+    setObstacles(obstacles); // Update the obstacles to render
+    setRobotState({ x: 1, y: 1, d: Direction.NORTH, s: -1 }); // Reset robot position to start
+    setRobotX(1); // Reset robot X position
+    setRobotY(1); // Reset robot Y position
+    setPage(0); // Reset the page to the first step of the path
+    setDistance(path.distance); // Update distance based on selected path
+    setTimeTaken(path.timeTaken); 
+};
+
+
 
   const renderGrid = () => {
     // Initialize the empty rows array
@@ -510,6 +535,23 @@ export default function Simulator() {
           Submit
         </button>
       </div>
+
+      <div className="flex flex-col items-center text-center bg-sky-200 p-4 rounded-xl shadow-xl my-8">
+    <h2 className="card-title text-black">History</h2>
+    <div className="overflow-y-auto max-h-40">
+        {pathHistory.map((path, index) => (
+            <div key={index} className="my-1"> {/* Create a new row for each path */}
+                <button 
+                    className="text-black" 
+                    onClick={() => renderPathOnGraph(path, obstacleHistory[index])} // Pass the corresponding obstacles
+                >
+                    Path {index + 1} 
+                    {/* : {JSON.stringify(path)} */}
+                </button>
+            </div>
+        ))}
+    </div>
+</div>
 
       {path.length > 0 && (
         <div className="flex flex-row items-center text-center bg-sky-200 p-4 rounded-xl shadow-xl my-8">
